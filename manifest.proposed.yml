@@ -1,0 +1,213 @@
+# PROPOSED manifest for "Precedent" — for review only, not yet scaffolded.
+# app.id is filled in by `forge create`. Items marked VERIFY are to be re-checked
+# against the Forge MCP server once it is authenticated.
+
+app:
+  id: ari:cloud:ecosystem::app/TO-BE-GENERATED
+  runtime:
+    name: nodejs24.x
+    memoryMB: 512
+  compatibility:                # multi-app: exactly one required product
+    jira:
+      required: true
+    confluence:
+      required: false
+  licensing:
+    enabled: true               # multi-app Marketplace listings must be PAID
+
+permissions:
+  scopes:
+    # --- Jira ---
+    - read:jira-work            # read issues; required for avi:jira:* events
+    - write:jira-work           # single comment + `precedent:conflict` label; notify owner
+    - read:jira-user            # owner avatars / display names
+    # --- Confluence (optional product) ---
+    - read:page:confluence      # pre-fill decision form from page title/body   VERIFY granular vs classic
+    # --- Teamwork Graph (per-object scopes; read:graph:jira is being retired) ---
+    - read:graph:issue:jira
+    - read:graph:project:jira
+    - read:graph:page:confluence
+    - read:graph:user:atlassian
+    - read:graph:team:atlassian
+    - read:graph:goal:atlassian
+    # Forge SQL needs no scope.
+
+modules:
+  # ---------- Storage ----------
+  sql:
+    - key: main
+      engine: mysql
+
+  # ---------- LLM (semantic re-rank, admin toggle, built in M8; declared now to avoid a later major version) ----------
+  llm:
+    - key: rerank-llm
+      model:
+        - claude
+
+  # ---------- Jira UI (UI Kit) ----------
+  jira:issuePanel:
+    - key: precedent-issue-panel
+      resource: issue-panel
+      resolver:
+        function: resolver
+      render: native
+      title: Precedent
+      icon: resource:icons;precedent.svg          # VERIFY resource-icon syntax for issuePanel
+
+  jira:globalPage:
+    - key: decision-ledger
+      resource: ledger
+      resolver:
+        function: resolver
+      render: native
+      title: Decision Ledger
+
+  jira:adminPage:
+    - key: precedent-settings
+      resource: settings
+      resolver:
+        function: resolver
+      render: native
+      title: Precedent settings
+
+  # ---------- Confluence UI (UI Kit) ----------
+  confluence:contentBylineItem:
+    - key: record-decision-byline
+      resource: confluence-capture
+      resolver:
+        function: resolver
+      render: native
+      title: Record as decision
+
+  # ---------- Triggers ----------
+  trigger:
+    - key: issue-conflict-check
+      function: on-issue-event
+      events:
+        - avi:jira:created:issue
+        - avi:jira:updated:issue
+      filter:
+        ignoreSelf: true          # don't react to our own comment/label writes
+  scheduledTrigger:
+    - key: sql-migrations
+      function: run-migrations
+      interval: hour              # idempotent; also run lazily on first resolver call
+
+  # ---------- Rovo ----------
+  rovo:agent:
+    - key: precedent-agent
+      name: Precedent                     # max 30 chars
+      description: Answers what your team decided, why, and who to ask — and flags work that conflicts with past decisions.
+      icon: resource:icons;precedent.svg
+      prompt: resource:agent-prompt;prompt.md    # VERIFY resource-path prompt format
+      conversationStarters:
+        - What did we decide about caching and why?
+        - Does this ticket conflict with any past decision?
+        - Who should I talk to before changing our public API?
+        - Draft a decision record from this page
+      actions:
+        - find-precedent
+        - check-conflict
+        - get-decision-context
+        - record-decision
+        - propose-revisit
+      skills:
+        - decision-review
+      followUpPrompt: Suggest up to three short follow-up questions about related decisions, owners, or revisit dates.
+
+  rovo:skill:
+    - key: decision-review
+      source:
+        dir: skills/decision-review       # contains SKILL.md (name: decision-review)
+      dependencies:
+        tools:
+          - find-precedent
+          - check-conflict
+          - get-decision-context
+
+  rovo:mcp:
+    - key: precedent-mcp
+      name: Precedent                     # max 30 chars; one per app; max 50 tools
+      tools:
+        - find-precedent
+        - check-conflict
+        - get-decision-context
+        - record-decision
+
+  action:
+    - key: find-precedent
+      name: Find precedent
+      function: actions
+      actionVerb: GET
+      description: >-
+        Call before implementing or proposing a change, to check whether the team
+        already made a decision about this topic. Returns ranked decisions with
+        rationale, rejected alternatives, owner and source link.
+      inputs:
+        query:     { title: Query, type: string, required: true,  description: Topic or change in plain words, e.g. "add a Redis cache for sessions" }
+        project:   { title: Project key, type: string, required: false, description: Jira project key, e.g. PLAT }
+        component: { title: Component, type: string, required: false, description: Component or area name }
+    - key: check-conflict
+      name: Check conflict
+      function: actions
+      actionVerb: GET
+      description: >-
+        Check a Jira issue or a free-text change description against recorded
+        decisions. Returns conflicts with the rejected alternative it collides with,
+        confidence, and the owner to talk to.
+      inputs:
+        issueKey: { title: Issue key, type: string, required: false, description: Jira issue key, e.g. PLAT-412 }
+        text:     { title: Change description, type: string, required: false, description: Free text if no issue key }
+    - key: get-decision-context
+      name: Get decision context
+      function: actions
+      actionVerb: GET
+      description: Full decision record plus related goals, teams, linked work and people to ask.
+      inputs:
+        decisionId: { title: Decision ID, type: string, required: true, description: ID returned by find-precedent or check-conflict }
+    - key: record-decision
+      name: Record decision
+      function: actions
+      actionVerb: CREATE
+      description: Record a new decision with status "proposed". Never mark it accepted.
+      inputs:
+        title:        { title: Title, type: string, required: true,  description: Short title }
+        statement:    { title: Statement, type: string, required: true,  description: '"We will X, not Y, for Z"' }
+        rationale:    { title: Rationale, type: string, required: true,  description: Why }
+        alternatives: { title: Rejected alternatives, type: string, required: false, description: 'One per line as "alternative :: reason"' }
+        keywords:     { title: Keywords, type: string, required: false, description: Comma-separated aliases }
+        projects:     { title: Projects, type: string, required: false, description: Comma-separated Jira project keys }
+        sourceUrl:    { title: Source link, type: string, required: false, description: Confluence page or Jira issue URL }
+    - key: propose-revisit
+      name: Propose revisit
+      function: actions
+      actionVerb: UPDATE
+      description: Mark a decision as "revisit" with a reason and notify its owner.
+      inputs:
+        decisionId: { title: Decision ID, type: string, required: true,  description: Decision to revisit }
+        reason:     { title: Reason, type: string, required: true,  description: What changed }
+
+  # ---------- Functions ----------
+  function:
+    - key: resolver
+      handler: index.resolver
+    - key: on-issue-event
+      handler: index.onIssueEvent
+    - key: run-migrations
+      handler: index.runMigrations
+    - key: actions
+      handler: index.actions
+
+resources:
+  - key: issue-panel
+    path: src/frontend/issue-panel.tsx
+  - key: ledger
+    path: src/frontend/ledger.tsx
+  - key: settings
+    path: src/frontend/settings.tsx
+  - key: confluence-capture
+    path: src/frontend/confluence-capture.tsx
+  - key: agent-prompt
+    path: src/rovo
+  - key: icons
+    path: static/icons
