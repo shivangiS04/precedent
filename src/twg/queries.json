@@ -1,0 +1,40 @@
+{
+  "_comment": "Teamwork Graph persisted Cypher queries. Registered once per app by scripts/register-twg-queries.mjs; keys land in queryKeys.json. Queries are immutable: to change one, edit the text here and re-run the script, which returns a new key.",
+  "queries": [
+    {
+      "id": "issueGoals",
+      "name": "precedent-issue-goals",
+      "purpose": "Goals the current work item contributes to (conflict card: 'tied to goal G')",
+      "cypher": "MATCH (item:JiraWorkItem {ari: $issueAri})-[:jira_work_item_contributes_to_atlassian_goal]->(goal:AtlassianGoal) RETURN goal",
+      "paramsSchema": [{ "name": "issueAri", "type": "ARI", "required": true }]
+    },
+    {
+      "id": "goalTeams",
+      "name": "precedent-goal-teams",
+      "purpose": "Teams contributing to a goal (conflict card: 'and team T')",
+      "cypher": "MATCH (team:AtlassianTeam)-[:atlassian_team_contributes_to_atlassian_goal]->(goal:AtlassianGoal {ari: $goalAri}) RETURN team",
+      "paramsSchema": [{ "name": "goalAri", "type": "ARI", "required": true }]
+    },
+    {
+      "id": "issueLinkedIssues",
+      "name": "precedent-issue-linked-issues",
+      "purpose": "Work items linked to a decision's source issue (related work)",
+      "cypher": "MATCH (item:JiraWorkItem {ari: $issueAri})-[:jira_work_item_links_jira_work_item]->(other:JiraWorkItem) RETURN other",
+      "paramsSchema": [{ "name": "issueAri", "type": "ARI", "required": true }]
+    },
+    {
+      "id": "pageContributors",
+      "name": "precedent-page-contributors",
+      "purpose": "People who contributed to a decision's source page ('who to ask')",
+      "cypher": "MATCH (user:AtlassianUser)-[:atlassian_user_contributed_to_confluence_page]->(page:ConfluencePage {ari: $pageAri}) RETURN user",
+      "paramsSchema": [{ "name": "pageAri", "type": "ARI", "required": true }]
+    },
+    {
+      "id": "userTeams",
+      "name": "precedent-user-teams",
+      "purpose": "Teams a decision owner belongs to (agent: 'who should I talk to')",
+      "cypher": "MATCH (user:AtlassianUser {ari: $userAri})-[:atlassian_user_is_in_atlassian_team]->(team:AtlassianTeam) RETURN team",
+      "paramsSchema": [{ "name": "userAri", "type": "ARI", "required": true }]
+    }
+  ]
+}
