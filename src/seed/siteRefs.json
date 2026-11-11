@@ -1,0 +1,85 @@
+{
+  "site": "one-atlas-buag.atlassian.net",
+  "users": [
+    "712020:6c31c0a5-7dfb-4986-954a-7d0525745024",
+    "5f51c0c59a0131004155b56e",
+    "60ad2d2a06bf0c006a42fa84",
+    "60ad2eb506bf0c006a432a17",
+    "60ad31159e21bd0071e67bfa",
+    "60ad301a5c7373006939113f"
+  ],
+  "pages": {
+    "adr-session-cache": {
+      "id": "3637249",
+      "title": "ADR-007: Session cache on Postgres, not Redis",
+      "url": "https://one-atlas-buag.atlassian.net/wiki/spaces/NWENG/pages/3637249"
+    },
+    "adr-public-api": {
+      "id": "3702785",
+      "title": "ADR-004: Public partner API is REST, not GraphQL",
+      "url": "https://one-atlas-buag.atlassian.net/wiki/spaces/NWENG/pages/3702785"
+    },
+    "adr-feature-flags": {
+      "id": "3735553",
+      "title": "ADR-002: Feature flags via LaunchDarkly only",
+      "url": "https://one-atlas-buag.atlassian.net/wiki/spaces/NWENG/pages/3735553"
+    },
+    "adr-microservices": {
+      "id": "3768321",
+      "title": "ADR-005: No new microservices without an ADR",
+      "url": "https://one-atlas-buag.atlassian.net/wiki/spaces/NWENG/pages/3768321"
+    },
+    "adr-card-data": {
+      "id": "3801089",
+      "title": "ADR-003: Card data never touches our servers",
+      "url": "https://one-atlas-buag.atlassian.net/wiki/spaces/NWENG/pages/3801089"
+    },
+    "draft-otel": {
+      "id": "3833857",
+      "title": "ADR-015 (draft): Adopt OpenTelemetry for tracing",
+      "url": "https://one-atlas-buag.atlassian.net/wiki/spaces/NWENG/pages/3833857"
+    }
+  },
+  "issues": {
+    "plat-session-spike": {
+      "id": "66400",
+      "key": "PLAT-33510",
+      "url": "https://one-atlas-buag.atlassian.net/browse/PLAT-33510"
+    },
+    "conflict-redis": {
+      "id": "66401",
+      "key": "PLAT-33511",
+      "url": "https://one-atlas-buag.atlassian.net/browse/PLAT-33511"
+    },
+    "conflict-flags": {
+      "id": "66402",
+      "key": "PLAT-33512",
+      "url": "https://one-atlas-buag.atlassian.net/browse/PLAT-33512"
+    },
+    "conflict-graphql": {
+      "id": "66403",
+      "key": "PLAT-33513",
+      "url": "https://one-atlas-buag.atlassian.net/browse/PLAT-33513"
+    },
+    "conflict-service": {
+      "id": "66404",
+      "key": "PLAT-33514",
+      "url": "https://one-atlas-buag.atlassian.net/browse/PLAT-33514"
+    },
+    "conflict-pan": {
+      "id": "66405",
+      "key": "PAY-1",
+      "url": "https://one-atlas-buag.atlassian.net/browse/PAY-1"
+    },
+    "conflict-float": {
+      "id": "66406",
+      "key": "PAY-2",
+      "url": "https://one-atlas-buag.atlassian.net/browse/PAY-2"
+    },
+    "neutral-onboarding": {
+      "id": "66407",
+      "key": "PAY-3",
+      "url": "https://one-atlas-buag.atlassian.net/browse/PAY-3"
+    }
+  }
+}
