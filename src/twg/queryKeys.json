@@ -1,1 +1,8 @@
-{}
+{
+  "_comment": "Persisted Cypher query keys for app 3fa13916-697c-4de7-ad17-9aa259ca2d67, registered via TWG Labs on 2026-11-11. Keys are not secrets; only this app can execute them.",
+  "pageContributors": { "queryKey": "d67a4797-0c4c-413c-bada-485140228d38", "name": "precedent-page-contributors" },
+  "issueLinkedIssues": { "queryKey": "1c925934-93ac-4b69-933e-8f4560edf7f0", "name": "precedent-issue-linked-issues" },
+  "issueGoals": { "queryKey": "54ea7e2b-3b45-4448-8898-154bfdbf8d50", "name": "precedent-issue-goals" },
+  "userTeams": { "queryKey": "e91d06e5-1865-453f-aad2-5605f81bb14e", "name": "roles" },
+  "goalTeams": { "queryKey": null, "name": "precedent-goal-teams", "pending": "register after seed data creates goals" }
+}
