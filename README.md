@@ -58,7 +58,7 @@ flowchart LR
 
 ## Setup
 
-Requirements: Node 24 (`nvm use`), Forge CLI 15+, an Atlassian site with Jira, Confluence and Rovo, and membership of the app's Developer Space.
+Requirements: Node 24 (`nvm use`), Forge CLI 15+, an Atlassian site with Jira, Confluence and Rovo, and membership of the app's Developer Space. The project's dev and demo site is a Forge demo site (`forge site provision`), which includes Rovo.
 
 ```bash
 npm install

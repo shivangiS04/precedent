@@ -13,6 +13,8 @@ bookmarks shows "No sites available". No admin setting fixes this. Rovo is neede
 **Mitigation:** a Forge demo site (`forge site provision`) includes enterprise Jira, Confluence, JSM and
 **Rovo**, with seeded data, active 90 days (to about 2027-02-09, after the 2026-12-23 deadline). Pending the
 user's decision to switch the test org.
+**Decision D18 (user):** switch to the demo site **one-atlas-buag.atlassian.net** (expires 2027-02-09) for building,
+Teamwork Graph and the demo. precedent-demo-yo keeps the dev install as a backup.
 
 Also added: an "Ask Precedent" button (`rovo.open`) with a live `rovo.isEnabled()` check on every surface.
 
