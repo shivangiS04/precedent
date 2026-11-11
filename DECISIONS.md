@@ -2,6 +2,20 @@
 
 Running log of product and platform decisions for Precedent. Newest first.
 
+## 2026-11-11 — M0 verification on precedent-demo-yo
+
+Checks: issue sidebar ✅, Decision Ledger ✅, admin settings ✅, Confluence byline ✅, Rovo agent ❌.
+
+**Risk R1: Rovo is not set up on precedent-demo-yo.** `rovo.isEnabled()` returns false. In admin, Rovo access is
+open (empty blocklist) and Rovo settings are on, but Agents → "Select a site" lists no sites, and Search
+bookmarks shows "No sites available". No admin setting fixes this. Rovo is needed for M4 (agent), M5
+(rovo:mcp), M7 (skill), the demo, and probably Teamwork Graph data (M6).
+**Mitigation:** a Forge demo site (`forge site provision`) includes enterprise Jira, Confluence, JSM and
+**Rovo**, with seeded data, active 90 days (to about 2027-02-09, after the 2026-12-23 deadline). Pending the
+user's decision to switch the test org.
+
+Also added: an "Ask Precedent" button (`rovo.open`) with a live `rovo.isEnabled()` check on every surface.
+
 ## 2026-11-11 — M0: scaffold, deploy, Marketplace answers
 
 | # | Decision | Why |
