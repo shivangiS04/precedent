@@ -1,0 +1,319 @@
+# Precedent: decision memory that catches conflicting work early.
+# Every module and scope is verified against the Forge MCP server (see DECISIONS.md).
+
+app:
+  id: ari:cloud:ecosystem::app/3fa13916-697c-4de7-ad17-9aa259ca2d67
+  runtime:
+    name: nodejs24.x
+    memoryMB: 512
+    architecture: arm64
+  compatibility:
+    jira:
+      required: true
+    confluence:
+      required: false
+  # licensing.enabled is added at M9 (Marketplace submission). A licensed app can't be
+  # shared by install link, so the judge build stays an unlicensed copy (see README).
+
+permissions:
+  scopes:
+    - read:jira-work
+    - write:jira-work
+    - read:jira-user
+    - read:permission:jira
+    - read:page:confluence
+    - read:confluence-content.permission
+    - read:chat:rovo
+    - read:graph:issue:jira
+    - read:graph:issue-comment:jira
+    - read:graph:project:jira
+    - read:graph:page:confluence
+    - read:graph:comment:confluence
+    - read:graph:space:confluence
+    - read:graph:user:atlassian
+    - read:graph:team:atlassian
+    - read:graph:goal:atlassian
+    - read:graph:project:atlassian
+
+modules:
+  # ---------- Storage + migrations ----------
+  sql:
+    - key: main
+      engine: mysql
+  consumer:
+    - key: migration-consumer
+      queue: migration-queue
+      function: run-migrations
+  scheduledTrigger:
+    - key: migration-sweeper
+      function: enqueue-migrations
+      interval: hour
+
+  # ---------- LLM (semantic re-rank behind admin toggle, M8) ----------
+  llm:
+    - key: rerank-llm
+      model:
+        - claude
+
+  # ---------- Jira UI ----------
+  jira:issueContext:
+    - key: precedent-issue-context
+      resource: issue-context
+      resolver:
+        function: resolver
+      render: native
+      title: Precedent
+      label: Precedent
+      status:
+        type: lozenge
+        value:
+          label: Not checked
+          type: default
+      dynamicProperties:
+        function: context-status
+
+  jira:issuePanel:
+    - key: precedent-issue-panel
+      resource: issue-panel
+      resolver:
+        function: resolver
+      render: native
+      title: Precedent
+      icon: resource:icons;precedent.svg
+
+  jira:globalPage:
+    - key: decision-ledger
+      resource: ledger
+      resolver:
+        function: resolver
+      render: native
+      title: Decision Ledger
+
+  jira:adminPage:
+    - key: precedent-settings
+      resource: settings
+      resolver:
+        function: resolver
+      render: native
+      title: Precedent settings
+
+  # ---------- Confluence UI ----------
+  confluence:contentBylineItem:
+    - key: record-decision-byline
+      resource: confluence-capture
+      resolver:
+        function: resolver
+      render: native
+      title: Record as decision
+
+  # ---------- Triggers ----------
+  trigger:
+    - key: issue-conflict-check
+      function: on-issue-event
+      events:
+        - avi:jira:created:issue
+        - avi:jira:updated:issue
+      filter:
+        ignoreSelf: true
+    - key: app-lifecycle
+      function: enqueue-migrations
+      events:
+        - avi:forge:installed:app
+        - avi:forge:upgraded:app
+
+  # ---------- Rovo ----------
+  rovo:agent:
+    - key: precedent-agent
+      name: Precedent
+      description: Answers what your team decided, why, and who to ask, and flags work that conflicts with past decisions.
+      icon: resource:icons;precedent.svg
+      prompt: resource:agent-prompt;prompt.md
+      conversationStarters:
+        - What did we decide about caching and why?
+        - Does this ticket conflict with any past decision?
+        - Who should I talk to before changing our public API?
+        - Draft a decision record from this page
+      actions:
+        - find-precedent
+        - check-conflict
+        - get-decision-context
+        - record-decision
+        - propose-revisit
+      skills:
+        - decision-review
+      followUpPrompt: Suggest up to three short follow-up questions about related decisions, owners, or revisit dates.
+
+  rovo:skill:
+    - key: decision-review
+      source:
+        dir: skills/decision-review
+      dependencies:
+        tools:
+          - find-precedent
+          - check-conflict
+          - get-decision-context
+
+  rovo:mcp:
+    - key: precedent-mcp
+      name: Precedent
+      tools:
+        - find-precedent
+        - check-conflict
+        - get-decision-context
+        - record-decision
+
+  action:
+    - key: find-precedent
+      name: Find precedent
+      function: fn-find-precedent
+      actionVerb: GET
+      description: >-
+        Call before implementing or proposing a change, to check whether the team
+        already made a decision about this topic. Returns ranked decisions with
+        rationale, rejected alternatives, owner and source link.
+      inputs:
+        query:
+          title: Query
+          type: string
+          required: true
+          description: 'Topic or change in plain words, e.g. "add a Redis cache for sessions"'
+        project:
+          title: Project key
+          type: string
+          required: false
+          description: 'Jira project key, e.g. PLAT'
+        component:
+          title: Component
+          type: string
+          required: false
+          description: Component or area name
+    - key: check-conflict
+      name: Check conflict
+      function: fn-check-conflict
+      actionVerb: GET
+      description: >-
+        Check a Jira issue or a free-text change description against recorded
+        decisions. Provide issueKey or text. Returns conflicts with the rejected
+        alternative it collides with, confidence, and the owner to talk to.
+      inputs:
+        issueKey:
+          title: Issue key
+          type: string
+          required: false
+          description: 'Jira issue key, e.g. PLAT-412'
+        text:
+          title: Change description
+          type: string
+          required: false
+          description: Free text describing the change, if there is no issue key
+    - key: get-decision-context
+      name: Get decision context
+      function: fn-get-decision-context
+      actionVerb: GET
+      description: Full decision record plus related goals, teams, linked work and people to ask.
+      inputs:
+        decisionId:
+          title: Decision ID
+          type: string
+          required: true
+          description: ID returned by find-precedent or check-conflict
+    - key: record-decision
+      name: Record decision
+      function: fn-record-decision
+      actionVerb: CREATE
+      description: >-
+        Record a new decision with status "proposed" (never accepted). List fields
+        are newline-delimited strings: alternatives one per line as
+        "alternative :: reason"; keywords and projects one per line.
+      inputs:
+        title:
+          title: Title
+          type: string
+          required: true
+          description: Short title
+        statement:
+          title: Statement
+          type: string
+          required: true
+          description: 'One sentence: "We will X, not Y, for Z"'
+        rationale:
+          title: Rationale
+          type: string
+          required: true
+          description: Why the decision was made
+        alternatives:
+          title: Rejected alternatives
+          type: string
+          required: false
+          description: 'One per line, formatted "alternative :: reason"'
+        keywords:
+          title: Keywords
+          type: string
+          required: false
+          description: 'One alias per line, e.g. redis'
+        projects:
+          title: Projects
+          type: string
+          required: false
+          description: One Jira project key per line
+        sourceUrl:
+          title: Source link
+          type: string
+          required: false
+          description: Confluence page or Jira issue URL
+    - key: propose-revisit
+      name: Propose revisit
+      function: fn-propose-revisit
+      actionVerb: UPDATE
+      description: Mark a decision as "revisit" with a reason and notify its owner.
+      inputs:
+        decisionId:
+          title: Decision ID
+          type: string
+          required: true
+          description: Decision to revisit
+        reason:
+          title: Reason
+          type: string
+          required: true
+          description: What changed since the decision was made
+
+  # ---------- Functions ----------
+  function:
+    - key: resolver
+      handler: index.resolver
+    - key: on-issue-event
+      handler: index.onIssueEvent
+    - key: context-status
+      handler: index.contextStatus
+    - key: enqueue-migrations
+      handler: index.enqueueMigrations
+    - key: run-migrations
+      handler: index.runMigrations
+      timeoutSeconds: 900
+    - key: fn-find-precedent
+      handler: index.findPrecedent
+    - key: fn-check-conflict
+      handler: index.checkConflict
+    - key: fn-get-decision-context
+      handler: index.getDecisionContext
+    - key: fn-record-decision
+      handler: index.recordDecision
+    - key: fn-propose-revisit
+      handler: index.proposeRevisit
+
+resources:
+  - key: issue-context
+    path: src/frontend/issue-context.tsx
+  - key: issue-panel
+    path: src/frontend/issue-panel.tsx
+  - key: ledger
+    path: src/frontend/ledger.tsx
+  - key: settings
+    path: src/frontend/settings.tsx
+  - key: confluence-capture
+    path: src/frontend/confluence-capture.tsx
+  - key: agent-prompt
+    path: src/rovo
+  - key: icons
+    path: static/icons

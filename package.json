@@ -1,0 +1,31 @@
+{
+  "name": "precedent",
+  "version": "0.1.0",
+  "description": "Decision memory that catches conflicting work early — Atlassian Forge app",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "lint": "forge lint",
+    "ci": "npm run typecheck && npm test && npm run lint"
+  },
+  "dependencies": {
+    "@forge/api": "^8.5.0",
+    "@forge/bridge": "^7.3.0",
+    "@forge/events": "^3.0.10",
+    "@forge/llm": "^1.0.10",
+    "@forge/react": "^12.5.0",
+    "@forge/resolver": "^2.0.2",
+    "@forge/sql": "^4.0.10",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.6.6",
+    "@types/react": "^18.3.31",
+    "jest": "^30.5.2",
+    "ts-jest": "^29.4.15",
+    "typescript": "~5.9"
+  }
+}

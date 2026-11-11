@@ -2,6 +2,21 @@
 
 Running log of product and platform decisions for Precedent. Newest first.
 
+## 2026-11-11 — M0: scaffold, deploy, Marketplace answers
+
+| # | Decision | Why |
+|---|----------|-----|
+| D10 | **Badge: `jira:issueContext`** with `dynamicProperties` (always in the issue sidebar, no admin setup); keep `jira:issuePanel` for full conflict cards | `jira:issueGlance` was deprecated in 2023 and replaced by issueContext. The issue panel only appears after a click or an admin's "Show for all work items" |
+| D11 | Verify in M2 when Jira first calls `dynamicProperties` | Docs say it runs on the panel's first expand, so the lozenge may read "Not checked" until then. Fallback: the trigger's `precedent:conflict` label is always visible |
+| D12 | **One app, one Marketplace listing** (Jira required, Confluence optional) | Marketplace detects compatibility from the manifest and installs into Jira, with Confluence connected during install. Cross-product calls work once connected |
+| D13 | **Judges install an unlicensed copy** ("Precedent – Judges", its own app id, distribution *Sharing*) | An app with licensing in its manifest, or submitted to Marketplace, can't be shared by install link |
+| D14 | `licensing.enabled` stays off until M9 | Keeps install-link testing possible during development |
+| D15 | Register Teamwork Graph persisted queries in **M1** (moved from M6) | About a minute to propagate; early registration de-risks M6 |
+| D16 | One function per action | Clear logs and handler isolation; no dispatch on `moduleKey` |
+| D17 | Scope count is **17** (not 18 as first stated) | Recount of the manifest |
+
+Results: `tsc` clean, 22/22 Jest tests pass, `forge lint` clean. Deployed v2.0.0 to development; **eligible for Runs on Atlassian**.
+
 ## 2026-11-11 — M0: platform verification (Forge MCP server)
 
 ### Locked choices

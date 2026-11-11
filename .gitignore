@@ -1,4 +1,15 @@
+# Secrets
 .env
 .env.*
+
+# Dependencies / build
 node_modules/
+dist/
+coverage/
+/.forge/
+
+# OS / IDE
 .DS_Store
+Thumbs.db
+.idea/
+*.log
