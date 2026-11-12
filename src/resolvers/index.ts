@@ -109,8 +109,17 @@ export const handler = makeResolver<Defs>({
 
   async seedDemoData({ context }) {
     const accountId = requireAccountId(context);
-    if (!(await isJiraAdmin(accountId))) return { ok: false, error: 'Only Jira admins can load demo data.' };
-    return seedNorthwind(accountId);
+    console.log('Precedent seed: requested');
+    if (!(await isJiraAdmin(accountId))) {
+      console.warn('Precedent seed: refused, caller is not a Jira admin');
+      return { ok: false, error: 'Only Jira admins can load demo data.' };
+    }
+    try {
+      return await seedNorthwind(accountId);
+    } catch (err) {
+      console.error('Precedent seed: failed', err);
+      return { ok: false, error: 'Precedent could not load demo data. Check the app logs.' };
+    }
   },
 
   async checkIssue({ context }) {
