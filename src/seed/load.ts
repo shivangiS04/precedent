@@ -66,5 +66,6 @@ export async function seedNorthwind(actorAccountId: string): Promise<SeedResult>
     const older = idBySlug.get(s.supersedes);
     if (newer && older) await repo.setStatus(older, 'superseded', newer);
   }
+  console.log(`Precedent seed: ${created} decisions created, ${skipped} already present`);
   return { ok: true, created, skipped };
 }

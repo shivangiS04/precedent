@@ -82,7 +82,7 @@ export async function createDecision(input: DecisionInput, createdBy: string | n
 
 export async function updateDecision(id: string, input: DecisionInput): Promise<void> {
   await run(
-    `UPDATE decisions SET title = ?, statement = ?, status = ?, rationale = ?, owner_account_id = ?, decided_at = ?, revisit_by = ?
+    `UPDATE decisions SET title = ?, statement = ?, status = ?, rationale = ?, owner_account_id = ?, decided_at = ?, revisit_by = ?, updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`,
     input.title,
     input.statement,
@@ -98,7 +98,7 @@ export async function updateDecision(id: string, input: DecisionInput): Promise<
 }
 
 export async function setStatus(id: string, status: DecisionStatus, supersededBy: string | null = null): Promise<void> {
-  await run('UPDATE decisions SET status = ?, superseded_by = ? WHERE id = ?', status, status === 'superseded' ? supersededBy : null, id);
+  await run('UPDATE decisions SET status = ?, superseded_by = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', status, status === 'superseded' ? supersededBy : null, id);
 }
 
 export interface ListFilter {
@@ -135,6 +135,18 @@ export async function listDecisions(filter: ListFilter = {}): Promise<Decision[]
 export async function getDecision(id: string): Promise<Decision | null> {
   const [d] = await listDecisions({ ids: [id], limit: 1 });
   return d ?? null;
+}
+
+/** Changes whenever any decision is added, edited or changes status. */
+export async function ledgerVersion(): Promise<string> {
+  const [r] = await run('SELECT COUNT(*) AS n, MAX(updated_at) AS m FROM decisions');
+  return `${Number(r?.n ?? 0)}:${toIso(r?.m)}`;
+}
+
+/** Decisions that can still conflict with new work (everything except superseded). */
+export async function liveDecisions(): Promise<Decision[]> {
+  const all = await listDecisions({ limit: 1000 });
+  return all.filter((d) => d.status !== 'superseded');
 }
 
 export async function countDecisions(): Promise<number> {
@@ -196,4 +208,88 @@ async function hydrate(rows: Row[]): Promise<Decision[]> {
       updatedAt: toIso(r.updated_at),
     };
   });
+}
+
+// ---------- Conflict feedback ----------
+
+export type FeedbackKind = 'not-related' | 'revisit' | 'acknowledge';
+
+export async function addFeedback(decisionId: string, issueKey: string | null, accountId: string, kind: FeedbackKind, reason: string | null = null): Promise<void> {
+  await run(
+    'INSERT INTO feedback (id, decision_id, issue_key, account_id, kind, reason) VALUES (?, ?, ?, ?, ?, ?)',
+    crypto.randomUUID(),
+    decisionId,
+    issueKey,
+    accountId,
+    kind,
+    reason,
+  );
+}
+
+export async function removeDismissal(decisionId: string, issueKey: string): Promise<void> {
+  await run("DELETE FROM feedback WHERE decision_id = ? AND issue_key = ? AND kind = 'not-related'", decisionId, issueKey);
+}
+
+/** Decision ids marked "not related" for an issue (by anyone: it's a team signal). */
+export async function dismissedFor(issueKey: string): Promise<Set<string>> {
+  const rows = await run("SELECT DISTINCT decision_id FROM feedback WHERE issue_key = ? AND kind = 'not-related'", issueKey);
+  return new Set(rows.map((r) => String(r.decision_id)));
+}
+
+// ---------- Conflict cache (written by the trigger and the live panel) ----------
+
+export interface CachedCheck {
+  issueId: string;
+  issueKey: string;
+  contentHash: string;
+  result: { matches: { decisionId: string; kind: string; confidence: number }[] };
+  commented: boolean;
+  checkedAt: string;
+}
+
+export async function getCachedCheck(issueId: string): Promise<CachedCheck | null> {
+  const [r] = await run('SELECT * FROM conflict_results WHERE issue_id = ?', issueId);
+  if (!r) return null;
+  const result = typeof r.result === 'string' ? JSON.parse(r.result) : r.result;
+  return {
+    issueId: String(r.issue_id),
+    issueKey: String(r.issue_key),
+    contentHash: String(r.content_hash),
+    result: result ?? { matches: [] },
+    commented: Number(r.commented) === 1,
+    checkedAt: toIso(r.checked_at),
+  };
+}
+
+export async function saveCachedCheck(issueId: string, issueKey: string, contentHash: string, result: CachedCheck['result'], commented?: boolean): Promise<void> {
+  await run(
+    `INSERT INTO conflict_results (issue_id, issue_key, content_hash, result, commented) VALUES (?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE issue_key = VALUES(issue_key), content_hash = VALUES(content_hash), result = VALUES(result),
+       commented = GREATEST(commented, VALUES(commented)), checked_at = CURRENT_TIMESTAMP`,
+    issueId,
+    issueKey,
+    contentHash,
+    JSON.stringify(result),
+    commented ? 1 : 0,
+  );
+}
+
+// ---------- Settings ----------
+
+export async function getSetting<T>(key: string, fallback: T): Promise<T> {
+  const [r] = await run('SELECT value FROM settings WHERE setting_key = ?', key);
+  if (!r) return fallback;
+  try {
+    return (typeof r.value === 'string' ? JSON.parse(r.value) : r.value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+export async function setSetting(key: string, value: unknown): Promise<void> {
+  await run(
+    'INSERT INTO settings (setting_key, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+    key,
+    JSON.stringify(value),
+  );
 }

@@ -3,6 +3,7 @@
  * Keep this file free of runtime imports so both bundles can use it.
  */
 import type { Decision, DecisionInput, DecisionStatus, FieldErrors } from '../domain/types';
+import type { IssueCheck } from '../core/check';
 
 export interface HealthInfo {
   database: 'ready' | 'migrating' | 'error';
@@ -21,4 +22,9 @@ export type Defs = {
   saveDecision: (args: { id?: string; input: DecisionInput }) => SaveResult;
   changeStatus: (args: { id: string; status: DecisionStatus; supersededBy?: string | null }) => SimpleResult;
   seedDemoData: () => SeedResult;
+  /** Issue surfaces: the issue comes from the module context, never from the payload. */
+  checkIssue: () => { check: IssueCheck | null; error?: string };
+  dismissConflict: (args: { decisionId: string }) => SimpleResult;
+  restoreConflict: (args: { decisionId: string }) => SimpleResult;
+  proposeRevisit: (args: { decisionId: string; reason: string }) => SimpleResult;
 };
