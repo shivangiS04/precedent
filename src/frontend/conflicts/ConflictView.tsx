@@ -26,6 +26,7 @@ import {
 import { makeInvoke, rovo } from '@forge/bridge';
 import type { Defs } from '../../shared/types';
 import type { ConflictCard, IssueCheck } from '../../core/check';
+import type { GraphContext } from '../../core/graph';
 import { StatusLozenge } from '../ledger/ui';
 
 const invoke = makeInvoke<Defs>();
@@ -48,6 +49,46 @@ const conflictStyle = xcss({
 
 const LEVEL = { high: 'High confidence', medium: 'Medium confidence', low: 'Low confidence' } as const;
 const truncate = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+/** Teamwork Graph context for one decision, loaded after the card renders. */
+const GraphLine = ({ decisionId }: { decisionId: string }) => {
+  const [g, setG] = useState<GraphContext | null>(null);
+  useEffect(() => {
+    invoke('decisionGraph', { decisionId })
+      .then(setG)
+      .catch(() => setG({ available: false }));
+  }, [decisionId]);
+  if (!g) return <Text>Loading related goals and teams…</Text>;
+  if (!g.available) return null;
+  const parts: [string, { name: string; url?: string | null }[]][] = [
+    ['Goals', g.goals ?? []],
+    ['Owner\'s teams', g.teams ?? []],
+    ['Also ask', g.people ?? []],
+  ];
+  const shown = parts.filter(([, items]) => items.length);
+  if (!shown.length) return null;
+  return (
+    <Stack space="space.050">
+      {shown.map(([label, items]) => (
+        <Text key={label}>
+          <Text weight="semibold">{`${label}: `}</Text>
+          {items.slice(0, 3).map((i, n) => (
+            <React.Fragment key={i.name}>
+              {n > 0 ? ', ' : ''}
+              {i.url ? (
+                <Link href={i.url} openNewTab>
+                  {i.name}
+                </Link>
+              ) : (
+                i.name
+              )}
+            </React.Fragment>
+          ))}
+        </Text>
+      ))}
+    </Stack>
+  );
+};
 
 const Card = ({
   card,
@@ -99,6 +140,7 @@ const Card = ({
             </Link>
           )}
         </Inline>
+        {!compact && card.kind === 'conflict' && <GraphLine decisionId={d.id} />}
         <Inline space="space.100" shouldWrap>
           <Button appearance="subtle" spacing="compact" onClick={onDismiss}>
             Not related

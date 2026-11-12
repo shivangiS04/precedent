@@ -3,6 +3,8 @@ import {
   Button,
   DatePicker,
   ErrorMessage,
+  Heading,
+  Inline,
   HelperMessage,
   Label,
   Modal,
@@ -27,7 +29,7 @@ import { STATUS_LABEL } from './ui';
 const invoke = makeInvoke<Defs>();
 
 /** Text versions of list fields, so editing is plain typing (one item per line). */
-interface Draft {
+export interface Draft {
   title: string;
   statement: string;
   rationale: string;
@@ -63,12 +65,46 @@ const statusOptions = (current: DecisionStatus | null) =>
     (s) => ({ label: STATUS_LABEL[s], value: s }),
   );
 
+/** Modal in the ledger; inline inside the Confluence byline dialog. */
+const Frame = ({
+  inline,
+  title,
+  onClose,
+  footer,
+  children,
+}: {
+  inline: boolean;
+  title: string;
+  onClose: () => void;
+  footer: React.ReactNode;
+  children: React.ReactNode;
+}) =>
+  inline ? (
+    <Stack space="space.200">
+      <Heading size="medium">{title}</Heading>
+      {children}
+      <Inline space="space.100" alignInline="end">
+        {footer}
+      </Inline>
+    </Stack>
+  ) : (
+    <Modal onClose={onClose} width="large">
+      <ModalHeader>
+        <ModalTitle>{title}</ModalTitle>
+      </ModalHeader>
+      <ModalBody>{children}</ModalBody>
+      <ModalFooter>{footer}</ModalFooter>
+    </Modal>
+  );
+
 export const DecisionForm = ({
   decision,
   defaults,
   onClose,
   onSaved,
+  inline = false,
 }: {
+  inline?: boolean;
   decision?: Decision | null;
   defaults?: Partial<Draft>;
   onClose: () => void;
@@ -125,11 +161,15 @@ export const DecisionForm = ({
   );
 
   return (
-    <Modal onClose={onClose} width="large">
-      <ModalHeader>
-        <ModalTitle>{decision ? 'Edit decision' : 'Record a decision'}</ModalTitle>
-      </ModalHeader>
-      <ModalBody>
+    <Frame inline={inline} title={decision ? 'Edit decision' : 'Record a decision'} onClose={onClose} footer={<>
+        <Button appearance="subtle" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button appearance="primary" onClick={submit} isDisabled={saving}>
+          {saving ? 'Saving…' : decision ? 'Save changes' : 'Record decision'}
+        </Button>
+      </>}>
+
         <Stack space="space.200">
           {errors.form && (
             <SectionMessage appearance="error">
@@ -189,15 +229,7 @@ export const DecisionForm = ({
           )}
           {errors.sources && <ErrorMessage>{String(errors.sources)}</ErrorMessage>}
         </Stack>
-      </ModalBody>
-      <ModalFooter>
-        <Button appearance="subtle" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button appearance="primary" onClick={submit} isDisabled={saving}>
-          {saving ? 'Saving…' : decision ? 'Save changes' : 'Record decision'}
-        </Button>
-      </ModalFooter>
-    </Modal>
+      
+    </Frame>
   );
 };

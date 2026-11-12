@@ -35,6 +35,6 @@ Review the proposal against the Decision Ledger and give a verdict the team can 
 
 - A high-confidence conflict with an `accepted` decision: recommend talking to the owner **before** work starts. Suggest `propose-revisit` only if the user gives a reason that something has changed.
 - A conflict with a `superseded` decision: ignore it, and check its replacement instead.
-- Decisions past their `revisit_by` date: mention that they're due for revisit; don't treat them as binding.
+- Decisions past their `revisitBy` date: mention that they're due for revisit; don't treat them as binding.
 - No results: say "There's no recorded decision about this." Never infer one.
 - An action returns `rejected` or `error`: report it and stop. Don't retry with altered inputs.

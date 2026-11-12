@@ -3,7 +3,7 @@ import { AccessDeniedError, requireAccountId } from '../permissions/access';
 /** What an action returns to Rovo / an MCP client. The agent turns it into natural language. */
 export type ActionResult = Record<string, unknown> | string;
 
-export type GuardedHandler<P> = (payload: P, accountId: string) => Promise<ActionResult>;
+export type GuardedHandler<P> = (payload: P, accountId: string, context: unknown) => Promise<ActionResult>;
 
 /**
  * Wraps an action handler so it only runs with an authenticated caller.
@@ -22,7 +22,7 @@ export function guarded<P>(handler: GuardedHandler<P>) {
       throw err;
     }
     try {
-      return await handler(payload, accountId);
+      return await handler(payload, accountId, context);
     } catch (err) {
       console.error('Precedent action failed', err);
       return { status: 'error', reason: 'Precedent could not complete this request. Try again later.' };

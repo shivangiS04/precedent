@@ -203,3 +203,21 @@ export function validateDecisionInput(raw: unknown): ValidationResult {
     },
   };
 }
+
+/** "redis = valkey, keydb" per line -> { redis: ["valkey", "keydb"] }. Keys and aliases are lowercased. */
+export function parseAliases(text: string | null | undefined): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const raw of String(text ?? '').split('\n').slice(0, 200)) {
+    const idx = raw.indexOf('=');
+    if (idx < 0) continue;
+    const key = raw.slice(0, idx).trim().toLowerCase().slice(0, 64);
+    const aliases = parseList(raw.slice(idx + 1), { lowercase: true }).filter((a) => a !== key).slice(0, 20);
+    if (key && aliases.length) out[key] = [...new Set([...(out[key] ?? []), ...aliases])];
+  }
+  return out;
+}
+
+export const formatAliases = (a: Record<string, string[]>) =>
+  Object.entries(a)
+    .map(([k, v]) => `${k} = ${v.join(', ')}`)
+    .join('\n');

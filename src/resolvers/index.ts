@@ -9,6 +9,11 @@ import { isJiraAdmin, resolveSourcesAsUser } from './sources';
 import { seedNorthwind } from '../seed/load';
 import { checkIssueForUser } from '../core/check';
 import { proposeRevisit } from '../core/revisit';
+import { cloudIdFrom, graphContextFor } from '../core/graph';
+import { loadSettings, saveSettings } from '../core/settings';
+import { parseAliases } from '../domain/parse';
+import api, { route } from '@forge/api';
+import { draftFromPage } from '../domain/pageDraft';
 
 /** Issue key from the Jira module context (issuePanel / issueContext). */
 const issueKeyFrom = (context: unknown): string | null => {
@@ -147,5 +152,49 @@ export const handler = makeResolver<Defs>({
     const accountId = requireAccountId(context);
     const res = await proposeRevisit(String(payload?.decisionId ?? ''), String(payload?.reason ?? ''), accountId, issueKeyFrom(context));
     return res.ok ? { ok: true } : { ok: false, error: res.error };
+  },
+
+  async decisionGraph({ payload, context }) {
+    const accountId = requireAccountId(context);
+    if (!(await loadSettings()).graphContext) return { available: false, reason: 'Turned off by an admin.' };
+    const d = payload?.decisionId ? await repo.getDecision(String(payload.decisionId)) : null;
+    const [visible] = d ? await filterVisible([d], accountId, forgePermissionClient) : [];
+    if (!visible) return { available: false, reason: 'No such decision.' };
+    const issueId = (context as { extension?: { issue?: { id?: string } } })?.extension?.issue?.id ?? null;
+    return graphContextFor(visible, cloudIdFrom(context), issueId);
+  },
+
+  async pageDraft({ context }) {
+    const accountId = requireAccountId(context);
+    const pageId = (context as { extension?: { content?: { id?: string } } })?.extension?.content?.id;
+    if (!pageId || !/^\d+$/.test(String(pageId))) return { ok: false, error: 'Open this from a Confluence page.' };
+    const res = await api.asUser().requestConfluence(route`/wiki/api/v2/pages/${String(pageId)}?body-format=storage`, {
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return { ok: false, error: "Precedent couldn't read this page." };
+    const page = (await res.json()) as { id: string; title: string; body?: { storage?: { value?: string } }; _links?: { webui?: string; base?: string } };
+    const base = page._links?.base ?? '';
+    const pageUrl = page._links?.webui ? `${base}${page._links.webui}` : '';
+    const all = await repo.listDecisions({ limit: 1000 });
+    const citing = all.filter((d) => d.sources.some((s) => s.kind === 'confluence-page' && s.ref === String(page.id)));
+    const existing = (await filterVisible(citing, accountId, forgePermissionClient)).map((d) => ({ id: d.id, title: d.title, status: d.status }));
+    return { ok: true, pageUrl, draft: draftFromPage(page.title, page.body?.storage?.value ?? ''), existing };
+  },
+
+  async getSettings({ context }) {
+    const accountId = requireAccountId(context);
+    return { settings: await loadSettings(), isAdmin: await isJiraAdmin(accountId) };
+  },
+
+  async saveSettings({ payload, context }) {
+    const accountId = requireAccountId(context);
+    if (!(await isJiraAdmin(accountId))) return { ok: false, error: 'Only Jira admins can change Precedent settings.' };
+    const p = payload?.settings ?? {};
+    const patch: Record<string, unknown> = {};
+    for (const k of ['labelConflicts', 'commentOnConflict', 'graphContext'] as const) if (typeof p[k] === 'boolean') patch[k] = p[k];
+    if (typeof p.aliasesText === 'string') patch.aliases = parseAliases(p.aliasesText);
+    const settings = await saveSettings(patch);
+    console.log(`Precedent: settings updated (${Object.keys(patch).join(', ')})`);
+    return { ok: true, settings };
   },
 });

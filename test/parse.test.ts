@@ -125,3 +125,12 @@ describe('validateDecisionInput', () => {
     expect(r.ok && r.value.sources).toEqual([expect.objectContaining({ kind: 'jira-issue', ref: 'PLAT-1' })]);
   });
 });
+
+import { formatAliases, parseAliases } from '../src/domain/parse';
+describe('parseAliases', () => {
+  it('parses key = a, b lines and round-trips', () => {
+    const a = parseAliases('Redis = Valkey, keydb\n\nnot a line\nflag = toggle\nredis = valkey, dragonfly');
+    expect(a).toEqual({ redis: ['valkey', 'keydb', 'dragonfly'], flag: ['toggle'] });
+    expect(parseAliases(formatAliases(a))).toEqual(a);
+  });
+});

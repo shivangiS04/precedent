@@ -4,6 +4,7 @@
  */
 import type { Decision, DecisionInput, DecisionStatus, FieldErrors } from '../domain/types';
 import type { IssueCheck } from '../core/check';
+import type { GraphContext } from '../core/graph';
 
 export interface HealthInfo {
   database: 'ready' | 'migrating' | 'error';
@@ -14,6 +15,22 @@ export interface HealthInfo {
 export type SaveResult = { ok: true; id: string } | { ok: false; errors: FieldErrors };
 export type SimpleResult = { ok: true } | { ok: false; error: string };
 export type SeedResult = { ok: true; created: number; skipped: number } | { ok: false; error: string };
+
+export interface AdminSettings {
+  labelConflicts: boolean;
+  commentOnConflict: boolean;
+  graphContext: boolean;
+  aliases: Record<string, string[]>;
+}
+
+export type PageDraftResult =
+  | {
+      ok: true;
+      pageUrl: string;
+      draft: { title: string; statement: string; rationale: string; alternatives: string; keywords: string; status: DecisionStatus };
+      existing: { id: string; title: string; status: DecisionStatus }[];
+    }
+  | { ok: false; error: string };
 
 export type Defs = {
   getHealth: () => HealthInfo;
@@ -27,4 +44,10 @@ export type Defs = {
   dismissConflict: (args: { decisionId: string }) => SimpleResult;
   restoreConflict: (args: { decisionId: string }) => SimpleResult;
   proposeRevisit: (args: { decisionId: string; reason: string }) => SimpleResult;
+  decisionGraph: (args: { decisionId: string }) => GraphContext;
+  /** Confluence byline: draft from the current page (page id comes from context). */
+  pageDraft: () => PageDraftResult;
+  /** Admin settings (Jira admins only). */
+  getSettings: () => { settings: AdminSettings; isAdmin: boolean };
+  saveSettings: (args: { settings: Partial<Omit<AdminSettings, 'aliases'>> & { aliasesText?: string } }) => SimpleResult & { settings?: AdminSettings };
 };

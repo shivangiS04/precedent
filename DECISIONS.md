@@ -2,6 +2,20 @@
 
 Running log of product and platform decisions for Precedent. Newest first.
 
+## 2026-11-12: M2 to M8 build (conflicts, actions, graph, capture, settings)
+
+| # | Decision | Why |
+|---|----------|-----|
+| D19 | **Deterministic matcher** (`src/domain/matcher.ts`): a rejected-alternative hit means *conflict*, a keyword/alias hit means *related*; project scope and status adjust confidence | Explainable ("Matches Redis, which this decision rejected"), fully unit-tested, and works without Rovo or an LLM. The LLM re-rank stays optional |
+| D20 | Superseded decisions never match; a decision never matches the work item it was recorded from | Avoids noise; the replacement decision carries the keywords |
+| D21 | Trigger and cache moved from M3 into M2 | The trigger writes logs, so the end-to-end path can be verified without a browser. Verified: PLAT-33515 was checked 3 s after creation |
+| D22 | The sidebar badge re-filters cached matches for the viewer; without a viewer it shows "Check panel" rather than a count | A count could reveal that hidden decisions exist |
+| D23 | Agents and MCP clients can only record decisions as **proposed** | A binding decision needs a human in the Ledger |
+| D24 | **Teamwork Graph runs as the user only** (no `asApp`). Graph context is best-effort and returns `available: false` on failure | Platform constraint; calls from MCP clients may lack a user token |
+| D25 | `goalTeams` persisted query not registered yet | Needs a goal ARI to validate in TWG Labs; the issue's goals already come from `issueGoals` |
+| D26 | Opt-in comment names only decisions **the person who changed the issue** can see; at most one per issue | Comments are visible to everyone who sees the issue |
+| D27 | Dev environment: `node_modules` lives in `node_modules.nosync` (symlinked) | The repo is on an iCloud-synced Desktop; macOS evicted files when the disk was full, which made `tsc` hang |
+
 ## 2026-11-11 — M0 verification on precedent-demo-yo
 
 Checks: issue sidebar ✅, Decision Ledger ✅, admin settings ✅, Confluence byline ✅, Rovo agent ❌.
