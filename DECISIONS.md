@@ -2,6 +2,15 @@
 
 Running log of product and platform decisions for Precedent. Newest first.
 
+## 2026-11-13: revisit reminders and Markdown export
+
+| # | Decision | Why |
+|---|----------|-----|
+| D28 | Daily scheduled job reminds owners of decisions past their revisit date; one reminder per decision every 30 days | Revisit dates are otherwise only visible if someone opens the Ledger |
+| D29 | Reminders go through the decision's Jira source, since Jira can only notify on issues | Decisions with only a Confluence source are skipped and counted in the log |
+| D30 | Markdown export is shown in a read-only box to copy | Forge UI Kit has no file download |
+| D31 | `goalTeams` query not registered | Not called by any code path; registration needs the TWG Labs browser step |
+
 ## 2026-11-12: M2 to M8 build (conflicts, actions, graph, capture, settings)
 
 | # | Decision | Why |

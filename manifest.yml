@@ -48,6 +48,9 @@ modules:
     - key: migration-sweeper
       function: enqueue-migrations
       interval: hour
+    - key: revisit-reminders
+      function: send-revisit-reminders
+      interval: day
 
   # ---------- LLM (semantic re-rank behind admin toggle, M8) ----------
   llm:
@@ -288,6 +291,9 @@ modules:
       handler: index.contextStatus
     - key: enqueue-migrations
       handler: index.enqueueMigrations
+    - key: send-revisit-reminders
+      handler: index.sendRevisitReminders
+      timeoutSeconds: 300
     - key: run-migrations
       handler: index.runMigrations
       timeoutSeconds: 900

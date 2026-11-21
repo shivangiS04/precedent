@@ -5,7 +5,13 @@ import {
   EmptyState,
   Heading,
   Inline,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  ModalTitle,
   ModalTransition,
+  TextArea,
   SectionMessage,
   Select,
   Stack,
@@ -20,6 +26,7 @@ import type { Defs } from '../../shared/types';
 import type { Decision, DecisionStatus } from '../../domain/types';
 import { DecisionDetail } from './DecisionDetail';
 import { DecisionForm } from './DecisionForm';
+import { decisionsToMarkdown } from '../../domain/markdown';
 import { StatusLozenge, formatDate, isDueForRevisit, STATUS_LABEL } from './ui';
 
 const invoke = makeInvoke<Defs>();
@@ -41,6 +48,7 @@ export const Ledger = () => {
   const [openId, setOpenId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Decision | 'new' | null>(null);
   const [rovoEnabled, setRovoEnabled] = useState(false);
+  const [markdown, setMarkdown] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(false);
@@ -138,6 +146,9 @@ export const Ledger = () => {
               Ask Precedent
             </Button>
           )}
+          <Button onClick={() => setMarkdown(decisionsToMarkdown(filtered, new Date().toISOString().slice(0, 10)))} isDisabled={filtered.length === 0}>
+            Export Markdown
+          </Button>
           <Button appearance="primary" onClick={() => setEditing('new')}>
             Record decision
           </Button>
@@ -201,6 +212,24 @@ export const Ledger = () => {
       />
 
       <ModalTransition>
+        {markdown !== null && (
+          <Modal onClose={() => setMarkdown(null)} width="large">
+            <ModalHeader>
+              <ModalTitle>Export Markdown</ModalTitle>
+            </ModalHeader>
+            <ModalBody>
+              <Stack space="space.100">
+                <Text>{`${filtered.length} decision${filtered.length === 1 ? '' : 's'} in the current view. Select all and copy.`}</Text>
+                <TextArea id="export" value={markdown} isReadOnly isMonospaced minimumRows={18} />
+              </Stack>
+            </ModalBody>
+            <ModalFooter>
+              <Button appearance="primary" onClick={() => setMarkdown(null)}>
+                Done
+              </Button>
+            </ModalFooter>
+          </Modal>
+        )}
         {open && !editing && (
           <DecisionDetail
             decision={open}
