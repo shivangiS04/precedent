@@ -115,9 +115,10 @@ ${p.alternatives.map(([a, r]) => `<tr><td>${esc(a)}</td><td>${esc(r)}</td></tr>`
 const me = must(await api('GET', '/rest/api/3/myself'), 'myself');
 console.log(`Seeding ${ATLASSIAN_SITE} as ${me.displayName}`);
 
-// Users for decision owners: me first, then other active humans.
+// Users for decision owners: me first, then other active humans (service accounts excluded).
+const SERVICE_ACCOUNT = /bot|bitbucket|system|provision|config|automation|agent|slack|teams/i;
 const users = must(await api('GET', '/rest/api/3/users/search?maxResults=100'), 'users');
-const owners = [me.accountId, ...users.filter((u) => u.accountType === 'atlassian' && u.active && u.accountId !== me.accountId).map((u) => u.accountId)].slice(0, 6);
+const owners = [me.accountId, ...users.filter((u) => u.accountType === 'atlassian' && u.active && u.accountId !== me.accountId && !SERVICE_ACCOUNT.test(u.displayName ?? '')).map((u) => u.accountId)].slice(0, 6);
 console.log(`✔ ${owners.length} owner account(s)`);
 
 // Jira projects
