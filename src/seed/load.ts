@@ -19,15 +19,21 @@ interface SiteRefs {
 export async function seedNorthwind(actorAccountId: string): Promise<SeedResult> {
   const refs = siteRefs as unknown as SiteRefs;
   const owners = refs.users?.length ? refs.users : [actorAccountId];
-  const existing = new Map((await repo.listDecisions({ limit: 1000 })).map((d) => [d.title, d.id]));
+  const existing = new Map((await repo.listDecisions({ limit: 1000 })).map((d) => [d.title, { id: d.id, owner: d.ownerAccountId }]));
   const idBySlug = new Map<string, string>();
   let created = 0;
   let skipped = 0;
+  let repaired = 0;
 
   for (const [i, s] of NORTHWIND.entries()) {
     const found = existing.get(s.title);
     if (found) {
-      idBySlug.set(s.slug, found);
+      idBySlug.set(s.slug, found.id);
+      // Repair demo decisions whose owner is not one of the human owners (e.g. a bot).
+      if (found.owner && !owners.includes(found.owner)) {
+        await repo.setOwner(found.id, owners[i % owners.length]);
+        repaired++;
+      }
       skipped++;
       continue;
     }
@@ -66,6 +72,6 @@ export async function seedNorthwind(actorAccountId: string): Promise<SeedResult>
     const older = idBySlug.get(s.supersedes);
     if (newer && older) await repo.setStatus(older, 'superseded', newer);
   }
-  console.log(`Precedent seed: ${created} decisions created, ${skipped} already present`);
-  return { ok: true, created, skipped };
+  console.log(`Precedent seed: ${created} created, ${skipped} already present, ${repaired} owners repaired`);
+  return { ok: true, created, skipped, repaired };
 }

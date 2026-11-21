@@ -4,7 +4,7 @@
 
 Teams make decisions in Confluence pages, Jira comments and meetings, then forget them. Months later someone starts work that contradicts a decision, or argues it all over again. Precedent keeps a structured **Decision Ledger**, links each decision to the work, people and goals around it through **Teamwork Graph**, and flags conflicts when new work is created: in Jira, in Rovo chat, and in developers' own AI coding tools through **MCP**.
 
-> Status: **M1 to M8 built** (Decision Ledger, conflict checks in Jira, Rovo agent actions and MCP tools, Teamwork Graph context, Confluence capture, admin settings). Remaining: M9 Marketplace packaging. See [DECISIONS.md](DECISIONS.md) for the design log.
+> Status: **M1 to M8 built and deployed** to the development environment, including revisit reminders and Markdown export. Remaining: browser checks of each surface, then M9 Marketplace packaging. See [DECISIONS.md](DECISIONS.md) for the design log.
 
 ## Architecture
 

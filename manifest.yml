@@ -70,7 +70,7 @@ modules:
       status:
         type: lozenge
         value:
-          label: Not checked
+          label: Open to check
           type: default
       dynamicProperties:
         function: context-status

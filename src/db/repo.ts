@@ -298,3 +298,8 @@ export async function setSetting(key: string, value: unknown): Promise<void> {
     JSON.stringify(value),
   );
 }
+
+/** Reassigns a decision's owner (used to repair demo data). */
+export async function setOwner(id: string, accountId: string): Promise<void> {
+  await run('UPDATE decisions SET owner_account_id = ? WHERE id = ?', accountId, id);
+}

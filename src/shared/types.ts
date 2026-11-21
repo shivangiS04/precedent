@@ -14,7 +14,7 @@ export interface HealthInfo {
 
 export type SaveResult = { ok: true; id: string } | { ok: false; errors: FieldErrors };
 export type SimpleResult = { ok: true } | { ok: false; error: string };
-export type SeedResult = { ok: true; created: number; skipped: number } | { ok: false; error: string };
+export type SeedResult = { ok: true; created: number; skipped: number; repaired?: number } | { ok: false; error: string };
 
 export interface AdminSettings {
   labelConflicts: boolean;
