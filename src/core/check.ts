@@ -122,7 +122,7 @@ export async function checkIssueInBackground(issueId: string, actorAccountId: st
 /** Badge text for the sidebar, from the cache. Re-filters for the viewer when known. */
 export async function badgeFor(issueId: string, accountId: string | null): Promise<{ label: string; type: 'default' | 'removed' | 'moved' | 'success' }> {
   const cached = await repo.getCachedCheck(issueId);
-  if (!cached) return { label: 'Not checked', type: 'default' };
+  if (!cached) return { label: 'Open to check', type: 'default' };
   let ids = cached.result.matches;
   if (accountId && ids.length) {
     const decisions = await repo.listDecisions({ ids: ids.map((m) => m.decisionId) });

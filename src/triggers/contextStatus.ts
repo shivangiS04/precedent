@@ -11,7 +11,7 @@ interface Payload {
 export const contextStatus = async (payload: Payload, context?: { principal?: { accountId?: string }; accountId?: string }): Promise<unknown> => {
   const issueId = payload?.extension?.issue?.id;
   const accountId = context?.principal?.accountId ?? context?.accountId ?? null;
-  let value: { label: string; type: string } = { label: 'Not checked', type: 'default' };
+  let value: { label: string; type: string } = { label: 'Open to check', type: 'default' };
   if (issueId) {
     try {
       value = await badgeFor(String(issueId), accountId);
