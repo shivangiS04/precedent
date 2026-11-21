@@ -1,14 +1,17 @@
 {
   "name": "precedent",
   "version": "0.1.0",
-  "description": "Decision memory that catches conflicting work early — Atlassian Forge app",
+  "description": "Decision memory that catches conflicting work early \u2014 Atlassian Forge app",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "lint": "forge lint",
-    "ci": "npm run typecheck && npm test && npm run lint"
+    "ci": "npm run typecheck && npm test && npm run lint",
+    "deploy:marketplace": "node scripts/deploy-variant.mjs marketplace",
+    "deploy:judges": "node scripts/deploy-variant.mjs judges",
+    "deploy:variant:dry": "node scripts/deploy-variant.mjs marketplace --dry-run && JUDGES_APP_ID=ari:cloud:ecosystem::app/00000000-0000-0000-0000-000000000000 node scripts/deploy-variant.mjs judges --dry-run"
   },
   "dependencies": {
     "@forge/api": "^8.5.0",

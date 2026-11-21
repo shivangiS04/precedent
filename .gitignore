@@ -14,3 +14,7 @@ coverage/
 Thumbs.db
 .idea/
 *.log
+
+# Staged deploy variants
+.forge-build/
+node_modules.nosync/
