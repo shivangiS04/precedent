@@ -18,33 +18,38 @@ async function run(query: string, ...params: unknown[]): Promise<Row[]> {
   return (res.rows ?? []) as Row[];
 }
 
+/** Inserts many rows with one statement per chunk. Per-row inserts exceeded the 25 s resolver limit. */
+async function insertMany(table: string, columns: string[], rows: unknown[][]): Promise<void> {
+  const CHUNK = 100;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const chunk = rows.slice(i, i + CHUNK);
+    const values = chunk.map(() => `(${placeholders(columns.length)})`).join(', ');
+    await run(`INSERT INTO ${table} (${columns.join(', ')}) VALUES ${values}`, ...chunk.flat());
+  }
+}
+
 async function insertChildren(id: string, input: DecisionInput): Promise<void> {
-  for (const a of input.alternatives ?? []) {
-    await run('INSERT INTO decision_alternatives (id, decision_id, alternative, reason) VALUES (?, ?, ?, ?)', crypto.randomUUID(), id, a.alternative, a.reason);
+  if (input.alternatives?.length) {
+    await insertMany(
+      'decision_alternatives',
+      ['id', 'decision_id', 'alternative', 'reason'],
+      input.alternatives.map((a) => [crypto.randomUUID(), id, a.alternative, a.reason]),
+    );
   }
   const scope = input.scope ?? {};
-  const scopeRows: [string, string][] = [
-    ...(scope.projects ?? []).map((v): [string, string] => ['project', v]),
-    ...(scope.components ?? []).map((v): [string, string] => ['component', v]),
-    ...(scope.labels ?? []).map((v): [string, string] => ['label', v]),
-    ...(scope.keywords ?? []).map((v): [string, string] => ['keyword', v]),
+  const scopeRows: unknown[][] = [
+    ...(scope.projects ?? []).map((v) => [id, 'project', v]),
+    ...(scope.components ?? []).map((v) => [id, 'component', v]),
+    ...(scope.labels ?? []).map((v) => [id, 'label', v]),
+    ...(scope.keywords ?? []).map((v) => [id, 'keyword', v]),
   ];
-  for (const [kind, value] of scopeRows) {
-    await run('INSERT INTO decision_scope (decision_id, kind, value) VALUES (?, ?, ?)', id, kind, value);
-  }
-  for (const accountId of input.deciders ?? []) {
-    await run('INSERT INTO decision_deciders (decision_id, account_id) VALUES (?, ?)', id, accountId);
-  }
-  for (const s of input.sources ?? []) {
-    await run(
-      'INSERT INTO decision_sources (id, decision_id, kind, ref, ref_numeric_id, comment_id, url) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      crypto.randomUUID(),
-      id,
-      s.kind,
-      s.ref,
-      s.refNumericId ?? null,
-      s.commentId ?? null,
-      s.url ?? null,
+  await insertMany('decision_scope', ['decision_id', 'kind', 'value'], scopeRows);
+  await insertMany('decision_deciders', ['decision_id', 'account_id'], (input.deciders ?? []).map((a) => [id, a]));
+  if (input.sources?.length) {
+    await insertMany(
+      'decision_sources',
+      ['id', 'decision_id', 'kind', 'ref', 'ref_numeric_id', 'comment_id', 'url'],
+      input.sources.map((s) => [crypto.randomUUID(), id, s.kind, s.ref, s.refNumericId ?? null, s.commentId ?? null, s.url ?? null]),
     );
   }
 }
