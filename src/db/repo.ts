@@ -303,3 +303,15 @@ export async function setSetting(key: string, value: unknown): Promise<void> {
 export async function setOwner(id: string, accountId: string): Promise<void> {
   await run('UPDATE decisions SET owner_account_id = ? WHERE id = ?', accountId, id);
 }
+
+/** Replaces a decision's source links (used to drop links to items that don't exist on this site). */
+export async function setSources(id: string, sources: Source[]): Promise<void> {
+  await run('DELETE FROM decision_sources WHERE decision_id = ?', id);
+  if (sources.length) {
+    await insertMany(
+      'decision_sources',
+      ['id', 'decision_id', 'kind', 'ref', 'ref_numeric_id', 'comment_id', 'url'],
+      sources.map((s) => [crypto.randomUUID(), id, s.kind, s.ref, s.refNumericId ?? null, s.commentId ?? null, s.url ?? null]),
+    );
+  }
+}

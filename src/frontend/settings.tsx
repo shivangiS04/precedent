@@ -166,7 +166,7 @@ const Settings = () => {
           </Inline>
           {seed?.ok && (
             <SectionMessage appearance="success" title="Demo data loaded">
-              <Text>{`${seed.created} decisions created, ${seed.skipped} already present${seed.repaired ? `, ${seed.repaired} owners reassigned from service accounts` : ''}.`}</Text>
+              <Text>{`${seed.created} decisions created, ${seed.skipped} already present${seed.repaired ? `, ${seed.repaired} demo decisions updated (owners or links on this site)` : ''}.`}</Text>
             </SectionMessage>
           )}
           {seed && !seed.ok && (
