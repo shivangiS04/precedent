@@ -63,4 +63,5 @@ console.log(`app id: ${manifest.match(/^\s+id:\s*(\S+)/m)?.[1]}`);
 console.log(`licensing: ${/licensing:/m.test(manifest) ? 'enabled' : 'off'}`);
 if (dryRun) process.exit(0);
 
-execFileSync('forge', ['deploy', '-e', 'development', '--non-interactive'], { cwd: dir, stdio: 'inherit' });
+const environment = process.env.DEPLOY_ENV ?? 'development';
+execFileSync('forge', ['deploy', '-e', environment, '--non-interactive'], { cwd: dir, stdio: 'inherit' });
