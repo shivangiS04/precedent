@@ -4,7 +4,7 @@
 
 Teams make decisions in Confluence pages, Jira comments and meetings, then forget them. Months later someone starts work that contradicts a decision, or argues it all over again. Precedent keeps a structured **Decision Ledger**, links each decision to the work, people and goals around it through **Teamwork Graph**, and flags conflicts when new work is created: in Jira, in Rovo chat, and in developers' own AI coding tools through **MCP**.
 
-> Status: **M1 to M8 built and deployed** to the development environment, including revisit reminders and Markdown export. Remaining: browser checks of each surface, then M9 Marketplace packaging. See [DECISIONS.md](DECISIONS.md) for the design log.
+> Status: **feature-complete and deployed to development and production.** Remaining: Marketplace submission (not started; waiting for the owner's go-ahead) and the Marketplace screenshots. See [DECISIONS.md](DECISIONS.md) for the design log.
 
 ## Architecture
 
@@ -119,4 +119,31 @@ Exposed tools: `find-precedent`, `check-conflict`, `get-decision-context`, `reco
 - **One app, one listing.** Precedent is a single Forge app that requires Jira and connects to Confluence optionally. Marketplace reads compatibility from the manifest. Admins install it into Jira and can connect Confluence during installation. Cross-product calls (for example `requestConfluence` from Jira-triggered code) work once both products are connected. Multi-product apps can only be listed as **paid** apps.
 - **Install link vs Marketplace.** An app that has `licensing` in its manifest, or has been submitted to Marketplace, **cannot be shared through an install link**. Judges therefore install a separate, unlicensed copy of the same code ("Precedent – Judges", its own app id, distribution set to *Sharing*). Its install link keeps working regardless of the Marketplace review. The judge site must have both Jira and Confluence.
 
-Test account notes: *added in M9.*
+Test account notes: see the judges setup guide in [docs/marketplace/judges-setup.md](docs/marketplace/judges-setup.md).
+
+## Build variants
+
+One codebase, two deployable apps:
+
+| Variant | Command | App | Licensing |
+|---|---|---|---|
+| Marketplace (paid listing) | `npm run deploy:marketplace` | the main app id in `manifest.yml` | on (added at build time) |
+| Judges (install link) | `npm run deploy:judges` | `JUDGES_APP_ID` from `.env` | off |
+
+`scripts/deploy-variant.mjs` stages each variant in `.forge-build/<variant>/`, so the two manifests never mix. Set `DEPLOY_ENV=production` to deploy to production. The Marketplace build should not be deployed until the listing is ready.
+
+Demo content for a site is seeded with `scripts/seed-site.mjs` (projects, work items, ADR pages). Set `REFS_FILE` to write the site's IDs to a separate file. The judges build uses `src/seed/siteRefs.judges.json`.
+
+## Marketplace documents
+
+- Listing copy: [docs/marketplace/listing.md](docs/marketplace/listing.md)
+- Privacy policy: [docs/marketplace/privacy-policy.md](docs/marketplace/privacy-policy.md)
+- Privacy and security answers: [docs/marketplace/privacy-security.md](docs/marketplace/privacy-security.md)
+- Screenshot checklist: [docs/marketplace/screenshots.md](docs/marketplace/screenshots.md)
+- Judges setup and install guide: [docs/marketplace/judges-setup.md](docs/marketplace/judges-setup.md)
+- Logo (144 × 144): [docs/marketplace/logo-144.png](docs/marketplace/logo-144.png)
+
+## License
+
+Precedent is released under the [MIT License](LICENSE).
+

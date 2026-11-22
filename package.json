@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Decision memory that catches conflicting work early \u2014 Atlassian Forge app",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "jest",
