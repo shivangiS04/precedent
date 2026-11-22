@@ -57,6 +57,12 @@ for (const item of ['src', 'skills', 'static', 'package.json', 'package-lock.jso
   await cp(path.join(root, item), path.join(dir, item), { recursive: true });
 }
 await symlink(path.join(root, 'node_modules'), path.join(dir, 'node_modules'));
+// The judges build seeds demo links for its demo site (see docs/marketplace/judges-setup.md).
+if (variant === 'judges') {
+  const judgesRefs = path.join(root, 'src/seed/siteRefs.judges.json');
+  const exists = await readFile(judgesRefs, 'utf8').then(() => true, () => false);
+  if (exists) await cp(judgesRefs, path.join(dir, 'src/seed/siteRefs.json'));
+}
 
 console.log(`Staged ${variant} in ${path.relative(root, dir)}`);
 console.log(`app id: ${manifest.match(/^\s+id:\s*(\S+)/m)?.[1]}`);

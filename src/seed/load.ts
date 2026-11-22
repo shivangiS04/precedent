@@ -3,7 +3,7 @@ import * as repo from '../db/repo';
 import { validateDecisionInput } from '../domain/parse';
 import type { Source } from '../domain/types';
 import type { SeedResult } from '../shared/types';
-import { NORTHWIND } from './northwind';
+import { NORTHWIND, type SeedDecision } from './northwind';
 import siteRefs from './siteRefs.json';
 
 interface SiteRefs {
@@ -15,8 +15,8 @@ interface SiteRefs {
 
 /**
  * Keeps only source links whose Jira issue or Confluence page exists on THIS site.
- * The demo content lives on one site; on other sites the links would point at nothing,
- * and Precedent hides decisions whose sources the viewer can't open.
+ * Precedent hides decisions whose sources the viewer can't open, so links to items
+ * that don't exist here would hide the decision.
  */
 async function keepExisting(sources: Source[]): Promise<Source[]> {
   const checks = await Promise.all(
@@ -39,45 +39,52 @@ async function keepExisting(sources: Source[]): Promise<Source[]> {
   return sources.filter((_, i) => checks[i]);
 }
 
+/** The sources a seed decision cites, according to this build's site references. */
+function desiredSources(s: SeedDecision, refs: SiteRefs): Source[] {
+  const out: Source[] = [];
+  const page = s.page ? refs.pages?.[s.page] : undefined;
+  if (page) out.push({ kind: 'confluence-page', ref: page.id, url: page.url, title: page.title });
+  const issue = s.issue ? refs.issues?.[s.issue] : undefined;
+  if (issue) out.push({ kind: 'jira-issue', ref: issue.key, refNumericId: Number(issue.id), url: issue.url });
+  return out;
+}
+
+const sameSources = (a: Source[], b: Source[]) =>
+  a.length === b.length && a.every((x) => b.some((y) => y.kind === x.kind && y.ref === x.ref));
+
 /**
- * Loads the Northwind decisions. Idempotent: decisions whose title already exists are skipped.
- * Sources point at the Jira issues / Confluence pages created by scripts/seed-site.mjs.
+ * Loads the Northwind decisions. Idempotent: existing decisions are kept, and their owners
+ * and source links are repaired to match this site. Only demo decisions (by title) are touched.
  */
 export async function seedNorthwind(actorAccountId: string): Promise<SeedResult> {
   const refs = siteRefs as unknown as SiteRefs;
   const owners = refs.users?.length ? refs.users : [actorAccountId];
-  const existing = new Map((await repo.listDecisions({ limit: 1000 })).map((d) => [d.title, { id: d.id, owner: d.ownerAccountId, sources: d.sources }]));
+  const existing = new Map(
+    (await repo.listDecisions({ limit: 1000 })).map((d) => [d.title, { id: d.id, owner: d.ownerAccountId, sources: d.sources }]),
+  );
   const idBySlug = new Map<string, string>();
   let created = 0;
   let skipped = 0;
   let repaired = 0;
 
   for (const [i, s] of NORTHWIND.entries()) {
+    const owner = owners[i % owners.length];
     const found = existing.get(s.title);
     if (found) {
       idBySlug.set(s.slug, found.id);
-      // Repair demo decisions whose owner is not one of the human owners (e.g. a bot).
       if (found.owner && !owners.includes(found.owner)) {
-        await repo.setOwner(found.id, owners[i % owners.length]);
+        await repo.setOwner(found.id, owner);
         repaired++;
       }
-      // Drop source links that don't resolve on this site.
-      const kept = await keepExisting(found.sources);
-      if (kept.length !== found.sources.length) {
-        await repo.setSources(found.id, kept);
+      const wanted = await keepExisting(desiredSources(s, refs));
+      if (!sameSources(wanted, found.sources)) {
+        await repo.setSources(found.id, wanted);
         repaired++;
       }
       skipped++;
       continue;
     }
-    const sources: Source[] = [];
-    const page = s.page ? refs.pages?.[s.page] : undefined;
-    if (page) sources.push({ kind: 'confluence-page', ref: page.id, url: page.url, title: page.title });
-    const issue = s.issue ? refs.issues?.[s.issue] : undefined;
-    if (issue) sources.push({ kind: 'jira-issue', ref: issue.key, refNumericId: Number(issue.id), url: issue.url });
 
-    const owner = owners[i % owners.length];
-    const usableSources = await keepExisting(sources);
     const parsed = validateDecisionInput({
       title: s.title,
       statement: s.statement,
@@ -89,7 +96,7 @@ export async function seedNorthwind(actorAccountId: string): Promise<SeedResult>
       deciders: [owner, owners[(i + 1) % owners.length]],
       alternatives: s.alternatives.map(([alternative, reason]) => ({ alternative, reason })),
       scope: { projects: s.projects, components: s.components ?? [], keywords: s.keywords },
-      sources: usableSources,
+      sources: await keepExisting(desiredSources(s, refs)),
     });
     if (!parsed.ok) {
       console.error('Seed decision invalid', s.slug, parsed.errors);
@@ -106,6 +113,6 @@ export async function seedNorthwind(actorAccountId: string): Promise<SeedResult>
     const older = idBySlug.get(s.supersedes);
     if (newer && older) await repo.setStatus(older, 'superseded', newer);
   }
-  console.log(`Precedent seed: ${created} created, ${skipped} already present, ${repaired} owners repaired`);
+  console.log(`Precedent seed: ${created} created, ${skipped} already present, ${repaired} repaired`);
   return { ok: true, created, skipped, repaired };
 }

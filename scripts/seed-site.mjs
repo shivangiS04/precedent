@@ -192,5 +192,5 @@ for (const p of PAGES) {
 }
 
 const out = { site: ATLASSIAN_SITE, users: owners, pages: pageRefs, issues: issueRefs };
-await writeFile(path.join(root, 'src/seed/siteRefs.json'), JSON.stringify(out, null, 2) + '\n');
+await writeFile(path.join(root, process.env.REFS_FILE ?? 'src/seed/siteRefs.json'), JSON.stringify(out, null, 2) + '\n');
 console.log('\nWrote src/seed/siteRefs.json');
